@@ -4,4 +4,5 @@ COPY express-hello/package.json ./
 RUN npm install --production
 COPY express-hello/server.js ./
 EXPOSE 8080
-CMD ["node", "server.js"]
+ENTRYPOINT ["node"]
+CMD ["server.js"]
