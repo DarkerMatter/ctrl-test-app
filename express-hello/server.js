@@ -4,7 +4,26 @@ const os = require("os");
 const PORT = process.env.PORT || 8080;
 const APP_ID = process.env.CTRL_APP_ID || "unknown";
 
+const TEST_ENDPOINTS = process.env.CTRL_TEST_ENDPOINTS === "1";
+const hog = [];
+
 const server = http.createServer((req, res) => {
+  if (req.url === "/__ctrl/crash" || req.url === "/__ctrl/oom") {
+    if (!TEST_ENDPOINTS) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "not found" }));
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }), () => {
+      if (req.url === "/__ctrl/crash") process.exit(1);
+      // Buffers live outside the V8 heap and fill(1) touches the pages, so the kernel OOM-killer
+      // (not V8's heap limit) ends the process.
+      setInterval(() => hog.push(Buffer.alloc(32 * 1024 * 1024, 1)), 50);
+    });
+    return;
+  }
+
   if (req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
